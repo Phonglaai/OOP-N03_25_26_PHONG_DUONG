@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import models.User;
 
 public class ListOfUser {
     // Store Users in a List

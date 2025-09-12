@@ -1,3 +1,5 @@
+package test;
+import models.Time;
 
 public class TestTime {
     public static void main(String[] args) {

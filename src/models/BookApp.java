@@ -1,3 +1,4 @@
+package models;
 public class BookApp {
     public static void main(String[] args) {
         Book book1 = new Book("Dac Nhan Tam", "Dale Carnegie", 86.000);
