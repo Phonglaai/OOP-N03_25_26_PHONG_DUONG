@@ -22,5 +22,5 @@ PHONG_DUONG_OUR_PROJECT
 - **Sửa (Edit)**: Cập nhật thông tin địa chỉ.
 - **Xóa (Delete)**: Xóa địa chỉ khỏi danh sách.
 
-## ER diagram
+## UML Class Diagram
 ![alt text](image.png)
