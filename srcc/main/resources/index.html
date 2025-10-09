@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Quản lý Sinh Viên</title>
+</head>
+<body>
+
+<h1>Danh sách Sinh Viên</h1>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Mã Sinh Viên</th>
+            <th>Tên Sinh Viên</th>
+            <th>Môn Học</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="sinhVien : ${sinhViens}">
+            <td th:text="${sinhVien.id}"></td>
+            <td th:text="${sinhVien.maSinhVien}"></td>
+            <td th:text="${sinhVien.tenSinhVien}"></td>
+            <td th:text="${sinhVien.monHoc.tenMonHoc}"></td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
