@@ -17,8 +17,8 @@ WORKDIR /app
 # Copy jar from builder
 COPY --from=builder /app/target/app-nuoc-mia-1.0.0.jar app.jar
 
-# Expose port (Railway/Render will override with PORT env var)
+# Expose port (Railway will set PORT env var)
 EXPOSE 8080
 
 # Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["java", "-Dserver.port=${PORT:-8080}", "-jar", "app.jar"]
