@@ -57,6 +57,6 @@ public interface DoanhThuRepository extends JpaRepository<DoanhThu, Long> {
     /**
      * Lấy doanh thu hôm nay
      */
-    @Query("SELECT d FROM DoanhThu d WHERE d.ngayGhiNhan = CURRENT_DATE")
+    @Query("SELECT d FROM DoanhThu d WHERE d.ngayGhiNhan = current_date")
     Optional<DoanhThu> layDoanhThuHomNay();
 }

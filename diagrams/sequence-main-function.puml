@@ -1,0 +1,224 @@
+@startuml Sequence_Main_Function
+
+title Sequence Diagram - Core Function\nPhương Thức Hoạt Động Chính: Cập Nhật Doanh Thu Từ Đơn Hàng\n(Liên kết 4 đối tượng: KhachHang, SanPham, DonHang, DoanhThu)
+
+actor "Khách Hàng" as User
+participant "Web UI" as UI
+participant "DonHangController" as DHC
+participant "DonHangService" as DHS
+participant "KhachHangService" as KHS
+participant "SanPhamService" as SPS
+participant "DoanhThuService" as DTS
+participant "DonHangRepository" as DHR
+participant "SanPhamRepository" as SPR
+participant "DoanhThuRepository" as DTR
+database "MySQL Database" as DB
+
+== BƯỚC 1: Khách Hàng Đặt Hàng ==
+User -> UI: Click "Đặt hàng"\nChọn sản phẩm, nhập số lượng
+activate UI
+UI -> DHC: POST /api/donhang/tao\n{khachHangId: 1, sanPhamId: 5, soLuong: 3}
+activate DHC
+
+DHC -> DHS: taoDonHang(1, 5, 3)
+activate DHS
+
+note over DHS
+  <b>Validate đơn hàng</b>
+  - Kiểm tra khách hàng tồn tại
+  - Kiểm tra sản phẩm tồn tại
+  - Kiểm tra số lượng hợp lệ
+end note
+
+DHS -> KHS: timKhachHangTheoId(1)
+activate KHS
+KHS --> DHS: KhachHang\n{id:1, ten:"Nguyễn Văn A", sdt:"0901234567"}
+deactivate KHS
+
+DHS -> SPS: timSanPhamTheoId(5)
+activate SPS
+SPS -> SPR: findById(5)
+activate SPR
+SPR -> DB: SELECT * FROM san_pham WHERE id = 5
+activate DB
+DB --> SPR: SanPham
+deactivate DB
+SPR --> SPS: SanPham\n{id:5, ten:"Nước Mía", donGia:15000, tonKho:50}
+deactivate SPR
+deactivate SPS
+
+DHS -> DHS: Kiểm tra tồn kho\nconHang() && duSoLuong(3)\n50 >= 3 → OK
+
+DHS -> DHS: Tạo DonHang\n- maDonHang = "DH" + timestamp\n- tongTien = 15000 * 3 = 45000\n- trangThai = "Đang xử lý"
+
+DHS -> DHR: save(donHang)
+activate DHR
+DHR -> DB: INSERT INTO don_hang\nVALUES (ma_don_hang, khach_hang_id, san_pham_id,\nso_luong, tong_tien, trang_thai, ngay_dat)
+activate DB
+DB --> DHR: DonHang saved {id: 100}
+deactivate DB
+DHR --> DHS: DonHang
+deactivate DHR
+
+== BƯỚC 2: Giảm Tồn Kho ==
+DHS -> SPS: capNhatTonKho(5, -3)
+activate SPS
+
+note right of SPS
+  <b>Cập nhật tồn kho</b>
+  tonKho = 50 - 3 = 47
+end note
+
+SPS -> SPR: save(sanPham)
+activate SPR
+SPR -> DB: UPDATE san_pham\nSET so_luong_ton_kho = 47\nWHERE id = 5
+activate DB
+DB --> SPR: SanPham updated
+deactivate DB
+SPR --> SPS: SanPham {tonKho: 47}
+deactivate SPR
+deactivate SPS
+
+DHS --> DHC: DonHang created\n{id:100, maDonHang:"DH1730901234567"}
+deactivate DHS
+DHC --> UI: 201 Created
+deactivate DHC
+UI --> User: ✅ "Đặt hàng thành công!\nMã đơn: DH1730901234567"
+deactivate UI
+
+== BƯỚC 3: Xác Nhận Hoàn Thành Đơn Hàng ==
+User -> UI: Click "Xác nhận hoàn thành"
+activate UI
+UI -> DHC: PATCH /api/donhang/100/hoan-thanh
+activate DHC
+
+DHC -> DHS: hoanThanhDonHang(100)
+activate DHS
+
+DHS -> DHR: findById(100)
+activate DHR
+DHR -> DB: SELECT * FROM don_hang WHERE id = 100
+activate DB
+DB --> DHR: DonHang
+deactivate DB
+DHR --> DHS: DonHang {trangThai: "Đang xử lý"}
+deactivate DHR
+
+DHS -> DHS: setTrangThai("Đã hoàn thành")
+
+DHS -> DHR: save(donHang)
+activate DHR
+DHR -> DB: UPDATE don_hang\nSET trang_thai = 'Đã hoàn thành'\nWHERE id = 100
+activate DB
+DB --> DHR: DonHang updated
+deactivate DB
+DHR --> DHS: DonHang {trangThai: "Đã hoàn thành"}
+deactivate DHR
+
+== BƯỚC 4: CẬP NHẬT DOANH THU (CORE FUNCTION) ==
+
+note over DHS, DTS
+  <b>🎯 PHƯƠNG THỨC HOẠT ĐỘNG CHÍNH</b>
+  Tự động cập nhật doanh thu khi đơn hàng hoàn thành
+  Liên kết tất cả 4 đối tượng:
+  KhachHang → DonHang → SanPham → DoanhThu
+end note
+
+DHS -> DTS: capNhatDoanhThuTuDonHang(donHang)
+activate DTS
+
+DTS -> DTS: Validate\ndaHoanThanh() == true ✓
+
+DTS -> DTS: Lấy ngày đơn hàng\nngayDonHang = donHang.getNgayDat().toLocalDate()
+
+DTS -> DTR: existsByNgayGhiNhan(ngayDonHang)
+activate DTR
+DTR -> DB: SELECT COUNT(*) FROM doanh_thu\nWHERE ngay_ghi_nhan = ?
+activate DB
+DB --> DTR: true (đã có báo cáo)
+deactivate DB
+DTR --> DTS: true
+deactivate DTR
+
+DTS -> DTS: layDoanhThuTheoNgay(ngayDonHang)
+DTS -> DTR: findByNgayGhiNhan(ngayDonHang)
+activate DTR
+DTR -> DB: SELECT * FROM doanh_thu\nWHERE ngay_ghi_nhan = ?
+activate DB
+DB --> DTR: DoanhThu\n{tongTien: 2000000, soDonHang: 45, soKhachHang: 30}
+deactivate DB
+DTR --> DTS: DoanhThu hiện tại
+deactivate DTR
+
+note over DTS
+  <b>Cập nhật doanh thu từ đơn hàng</b>
+  - tongTien: 2000000 + 45000 = 2045000
+  - soDonHang: 45 + 1 = 46
+  - thoiGianCapNhat = LocalDateTime.now()
+end note
+
+DTS -> DTS: capNhatDoanhThuTuDonHang(donHang)\n- doanhThu.tongTien += 45000\n- doanhThu.soDonHang++
+
+DTS -> DTR: save(doanhThu)
+activate DTR
+DTR -> DB: UPDATE doanh_thu\nSET tong_tien = 2045000,\n    so_don_hang = 46,\n    thoi_gian_cap_nhat = NOW()\nWHERE id = ?
+activate DB
+DB --> DTR: DoanhThu updated
+deactivate DB
+DTR --> DTS: DoanhThu\n{tongTien: 2045000, soDonHang: 46}
+deactivate DTR
+
+DTS --> DHS: DoanhThu updated ✅
+deactivate DTS
+
+DHS --> DHC: DonHang hoàn thành + DoanhThu cập nhật
+deactivate DHS
+DHC --> UI: 200 OK
+deactivate DHC
+
+UI --> User: ✅ "Đơn hàng đã hoàn thành!\nDoanh thu đã được cập nhật"
+deactivate UI
+
+== BƯỚC 5: Xem Báo Cáo Doanh Thu ==
+User -> UI: Click "Xem doanh thu hôm nay"
+activate UI
+UI -> DHC: GET /api/doanhthu/hom-nay
+activate DHC
+
+DHC -> DTS: layDoanhThuHomNay()
+activate DTS
+
+DTS -> DTR: layDoanhThuHomNay()
+activate DTR
+DTR -> DB: SELECT * FROM doanh_thu\nWHERE ngay_ghi_nhan = CURRENT_DATE
+activate DB
+DB --> DTR: DoanhThu
+deactivate DB
+DTR --> DTS: DoanhThu {tongTien: 2045000, soDonHang: 46}
+deactivate DTR
+
+DTS --> DHC: DoanhThu hôm nay
+deactivate DTS
+DHC --> UI: 200 OK
+deactivate DHC
+
+UI --> User: 📊 Hiển thị báo cáo:\n"Doanh thu hôm nay: 2,045,000 VNĐ\nSố đơn hàng: 46 đơn"
+deactivate UI
+
+note over User, DB
+  <b>✅ HOÀN TẤT LUỒNG HOẠT ĐỘNG CHÍNH</b>
+  
+  Kết quả:
+  1. ✅ Khách hàng đặt hàng thành công
+  2. ✅ Tồn kho sản phẩm được cập nhật (50 → 47)
+  3. ✅ Đơn hàng được tạo và hoàn thành
+  4. ✅ Doanh thu được cập nhật tự động (2,000,000 → 2,045,000)
+  
+  <b>4 Đối tượng liên kết:</b>
+  • KhachHang: Người đặt hàng
+  • SanPham: Sản phẩm được đặt
+  • DonHang: Giao dịch mua bán
+  • DoanhThu: Tổng hợp kết quả kinh doanh
+end note
+
+@enduml

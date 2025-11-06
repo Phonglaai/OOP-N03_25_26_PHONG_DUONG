@@ -1,0 +1,162 @@
+@startuml Sequence_CRUD_KhachHang
+
+title Sequence Diagram - CRUD Khách Hàng\nCRUD Operations for KhachHang Entity
+
+actor User
+participant "Controller" as C
+participant "KhachHangService" as KHS
+participant "KhachHangRepository" as KHR
+database "MySQL Database" as DB
+participant "MyGlobal" as EH
+
+== CREATE - Tạo Khách Hàng ==
+User -> C: POST /api/khachhang\n{ten, soDienThoai, email}
+activate C
+C -> KHS: taoKhachHang(khachHang)
+activate KHS
+
+KHS -> KHS: Validate dữ liệu\n- Kiểm tra tên không rỗng\n- Kiểm tra SĐT không rỗng
+
+KHS -> KHR: existsBySoDienThoai(soDienThoai)
+activate KHR
+KHR -> DB: SELECT * WHERE soDienThoai = ?
+activate DB
+DB --> KHR: false
+deactivate DB
+deactivate KHR
+
+KHS -> KHR: save(khachHang)
+activate KHR
+KHR -> DB: INSERT INTO khach_hang VALUES (...)
+activate DB
+DB --> KHR: KhachHang entity
+deactivate DB
+KHR --> KHS: KhachHang saved
+deactivate KHR
+
+KHS --> C: KhachHang created
+deactivate KHS
+C --> User: 201 Created\n{id, ten, soDienThoai}
+deactivate C
+
+== READ - Lấy Danh Sách Khách Hàng ==
+User -> C: GET /api/khachhang
+activate C
+C -> KHS: layTatCaKhachHang()
+activate KHS
+KHS -> KHR: findAll()
+activate KHR
+KHR -> DB: SELECT * FROM khach_hang
+activate DB
+DB --> KHR: List<KhachHang>
+deactivate DB
+KHR --> KHS: List<KhachHang>
+deactivate KHR
+KHS --> C: List<KhachHang>
+deactivate KHS
+C --> User: 200 OK\n[{khachHang1}, {khachHang2}, ...]
+deactivate C
+
+== READ - Tìm Khách Hàng Theo ID ==
+User -> C: GET /api/khachhang/{id}
+activate C
+C -> KHS: timKhachHangTheoId(id)
+activate KHS
+KHS -> KHR: findById(id)
+activate KHR
+KHR -> DB: SELECT * FROM khach_hang WHERE id = ?
+activate DB
+DB --> KHR: Optional<KhachHang>
+deactivate DB
+KHR --> KHS: Optional<KhachHang>
+deactivate KHR
+
+alt Khách hàng tồn tại
+    KHS --> C: KhachHang found
+    deactivate KHS
+    C --> User: 200 OK\n{khachHang}
+    deactivate C
+else Không tìm thấy
+    KHS -> EH: throw MyException("Không tìm thấy khách hàng")
+    activate EH
+    EH --> C: ModelAndView("error")
+    deactivate EH
+    deactivate KHS
+    C --> User: error page
+    deactivate C
+end
+
+== UPDATE - Cập Nhật Khách Hàng ==
+User -> C: PUT /api/khachhang/{id}\n{ten, email, diaChi}
+activate C
+C -> KHS: capNhatKhachHang(id, khachHangMoi)
+activate KHS
+
+KHS -> KHS: timKhachHangTheoId(id)
+KHS -> KHR: findById(id)
+activate KHR
+KHR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> KHR: KhachHang
+deactivate DB
+KHR --> KHS: KhachHang
+deactivate KHR
+
+KHS -> KHS: Cập nhật thông tin\n- setTen()\n- setEmail()\n- setDiaChi()
+
+KHS -> KHR: save(khachHang)
+activate KHR
+KHR -> DB: UPDATE khach_hang SET ...
+activate DB
+DB --> KHR: KhachHang updated
+deactivate DB
+KHR --> KHS: KhachHang
+deactivate KHR
+
+KHS --> C: KhachHang updated
+deactivate KHS
+C --> User: 200 OK\n{khachHang updated}
+deactivate C
+
+== DELETE - Xóa Khách Hàng ==
+User -> C: DELETE /api/khachhang/{id}
+activate C
+C -> KHS: xoaKhachHang(id)
+activate KHS
+
+KHS -> KHS: timKhachHangTheoId(id)
+KHS -> KHR: findById(id)
+activate KHR
+KHR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> KHR: KhachHang
+deactivate DB
+KHR --> KHS: KhachHang
+deactivate KHR
+
+KHS -> KHS: Kiểm tra có đơn hàng không
+
+alt Không có đơn hàng
+    KHS -> KHR: deleteById(id)
+    activate KHR
+    KHR -> DB: DELETE FROM khach_hang WHERE id = ?
+    activate DB
+    DB --> KHR: success
+    deactivate DB
+    KHR --> KHS: deleted
+    deactivate KHR
+    KHS --> C: success
+    deactivate KHS
+    C --> User: 204 No Content
+    deactivate C
+else Có đơn hàng
+    KHS -> EH: throw MyException("Không thể xóa")
+    activate EH
+    EH --> C: ModelAndView("error")
+    deactivate EH
+    deactivate KHS
+    C --> User: error page
+    deactivate C
+end
+
+@enduml

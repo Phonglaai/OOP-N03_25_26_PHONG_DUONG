@@ -56,12 +56,12 @@ public interface DonHangRepository extends JpaRepository<DonHang, Long> {
     /**
      * Tính tổng doanh thu theo ngày
      */
-    @Query("SELECT SUM(d.tongTien) FROM DonHang d WHERE DATE(d.ngayDat) = CURRENT_DATE AND d.trangThai = 'Đã hoàn thành'")
+    @Query("SELECT SUM(d.tongTien) FROM DonHang d WHERE CAST(d.ngayDat AS date) = CURRENT_DATE AND d.trangThai = 'Đã hoàn thành'")
     Double tinhDoanhThuHomNay();
 
     /**
      * Đếm số đơn hàng hoàn thành hôm nay
      */
-    @Query("SELECT COUNT(d) FROM DonHang d WHERE DATE(d.ngayDat) = CURRENT_DATE AND d.trangThai = 'Đã hoàn thành'")
+    @Query("SELECT COUNT(d) FROM DonHang d WHERE CAST(d.ngayDat AS date) = CURRENT_DATE AND d.trangThai = 'Đã hoàn thành'")
     long demDonHangHomNay();
 }

@@ -1,0 +1,217 @@
+@startuml Class_Diagram_App_Nuoc_Mia
+
+title Class Diagram - App Order Nước Mía\nStructural Diagram - Mô tả cấu trúc 4 đối tượng chính
+
+' Styling
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor LightYellow
+    BorderColor Black
+    ArrowColor Black
+}
+
+' KhachHang Entity
+class KhachHang {
+    - id: Long
+    - ten: String
+    - soDienThoai: String
+    - diaChi: String
+    - email: String
+    - ngayTao: LocalDateTime
+    - danhSachDonHang: List<DonHang>
+    --
+    + KhachHang()
+    + KhachHang(ten, soDienThoai)
+    + hienThiThongTin(): String
+    + tongSoDonHang(): int
+    + tongTienChiTieu(): double
+}
+
+' SanPham Entity
+class SanPham {
+    - id: Long
+    - maSanPham: String
+    - tenSanPham: String
+    - donGia: Double
+    - soLuongTonKho: Integer
+    - moTa: String
+    - loaiSanPham: String
+    - trangThai: Boolean
+    --
+    + SanPham()
+    + SanPham(maSanPham, tenSanPham, donGia)
+    + conHang(): boolean
+    + duSoLuong(soLuong): boolean
+    + giamTonKho(soLuong): void
+    + tangTonKho(soLuong): void
+    + tinhThanhTien(soLuong): double
+}
+
+' DonHang Entity
+class DonHang {
+    - id: Long
+    - maDonHang: String
+    - khachHang: KhachHang
+    - sanPham: SanPham
+    - soLuong: Integer
+    - donGia: Double
+    - tongTien: Double
+    - ngayDat: LocalDateTime
+    - trangThai: String
+    - ghiChu: String
+    --
+    + DonHang()
+    + DonHang(khachHang, sanPham, soLuong)
+    + tinhLaiTongTien(): void
+    + hoanThanh(): void
+    + huy(): void
+    + daHoanThanh(): boolean
+}
+
+' DoanhThu Entity (Core Object)
+class DoanhThu {
+    - id: Long
+    - ngayGhiNhan: LocalDate
+    - tongTien: Double
+    - soDonHang: Integer
+    - soKhachHang: Integer
+    - thoiGianCapNhat: LocalDateTime
+    - ghiChu: String
+    --
+    + DoanhThu()
+    + DoanhThu(ngayGhiNhan)
+    + capNhatDoanhThuTuDonHang(donHang): void
+    + tinhDoanhThuTrungBinh(): double
+    + themDoanhThu(soTien): void
+    + themDonHang(): void
+    + resetDoanhThu(): void
+}
+
+' Repositories
+interface KhachHangRepository {
+    + findBySoDienThoai(soDienThoai): Optional<KhachHang>
+    + findByTenContainingIgnoreCase(ten): List<KhachHang>
+    + existsBySoDienThoai(soDienThoai): boolean
+}
+
+interface SanPhamRepository {
+    + findByMaSanPham(maSanPham): Optional<SanPham>
+    + findByTrangThaiTrue(): List<SanPham>
+    + timSanPhamConHang(): List<SanPham>
+}
+
+interface DonHangRepository {
+    + findByMaDonHang(maDonHang): Optional<DonHang>
+    + findByKhachHang(khachHang): List<DonHang>
+    + tinhDoanhThuHomNay(): Double
+}
+
+interface DoanhThuRepository {
+    + findByNgayGhiNhan(ngay): Optional<DoanhThu>
+    + layDoanhThuHomNay(): Optional<DoanhThu>
+    + findTop10ByOrderByTongTienDesc(): List<DoanhThu>
+}
+
+' Services
+class KhachHangService {
+    - khachHangRepository: KhachHangRepository
+    --
+    + taoKhachHang(khachHang): KhachHang
+    + layTatCaKhachHang(): List<KhachHang>
+    + timKhachHangTheoId(id): KhachHang
+    + capNhatKhachHang(id, khachHang): KhachHang
+    + xoaKhachHang(id): void
+}
+
+class SanPhamService {
+    - sanPhamRepository: SanPhamRepository
+    --
+    + themSanPham(sanPham): SanPham
+    + layTatCaSanPham(): List<SanPham>
+    + timSanPhamTheoId(id): SanPham
+    + capNhatSanPham(id, sanPham): SanPham
+    + xoaSanPham(id): void
+    + capNhatTonKho(id, soLuong): SanPham
+}
+
+class DonHangService {
+    - donHangRepository: DonHangRepository
+    - khachHangService: KhachHangService
+    - sanPhamService: SanPhamService
+    --
+    + taoDonHang(khachHangId, sanPhamId, soLuong): DonHang
+    + layTatCaDonHang(): List<DonHang>
+    + timDonHangTheoId(id): DonHang
+    + capNhatTrangThai(id, trangThai): DonHang
+    + hoanThanhDonHang(id): DonHang
+    + huyDonHang(id): DonHang
+}
+
+class DoanhThuService {
+    - doanhThuRepository: DoanhThuRepository
+    - donHangService: DonHangService
+    --
+    + taoDoanhThu(ngay): DoanhThu
+    + layDoanhThuHomNay(): DoanhThu
+    + capNhatDoanhThu(id, tongTien, soDonHang, soKhachHang): DoanhThu
+    + capNhatDoanhThuTuDonHang(donHang): DoanhThu
+    + dongBoDoanhThuHomNay(): DoanhThu
+    + layTopDoanhThuCaoNhat(): List<DoanhThu>
+}
+
+' Exception Handling
+class MyException {
+    + MyException(message)
+    + MyException(message, cause)
+}
+
+class MyGlobal {
+    + handleMyException(e): ModelAndView
+    + handleNullPointerException(e): ModelAndView
+    + handleAllExceptions(e): ModelAndView
+}
+
+' Relationships - Entities
+KhachHang "1" -- "0..*" DonHang : có >
+SanPham "1" -- "0..*" DonHang : được đặt trong >
+DonHang "0..*" ..> DoanhThu : cập nhật >
+
+' Relationships - Repositories
+KhachHangRepository ..> KhachHang : manages
+SanPhamRepository ..> SanPham : manages
+DonHangRepository ..> DonHang : manages
+DoanhThuRepository ..> DoanhThu : manages
+
+' Relationships - Services
+KhachHangService --> KhachHangRepository : uses
+SanPhamService --> SanPhamRepository : uses
+DonHangService --> DonHangRepository : uses
+DonHangService --> KhachHangService : uses
+DonHangService --> SanPhamService : uses
+DoanhThuService --> DoanhThuRepository : uses
+DoanhThuService --> DonHangService : uses
+
+' Exception Handling
+KhachHangService ..> MyException : throws
+SanPhamService ..> MyException : throws
+DonHangService ..> MyException : throws
+DoanhThuService ..> MyException : throws
+MyGlobal ..> MyException : handles
+
+note right of DoanhThu
+  <b>Đối tượng lõi (Core Object)</b>
+  Lưu giữ hoạt động chính của ứng dụng
+  - Tổng hợp doanh thu từ đơn hàng
+  - Liên kết 4 đối tượng: 
+    KhachHang, SanPham, DonHang, DoanhThu
+end note
+
+note left of DonHang
+  <b>Đối tượng trung gian</b>
+  Kết nối KhachHang và SanPham
+  - Xử lý giao dịch mua bán
+  - Cập nhật tồn kho
+  - Tính toán doanh thu
+end note
+
+@enduml

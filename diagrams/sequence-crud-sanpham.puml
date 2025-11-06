@@ -1,0 +1,190 @@
+@startuml Sequence_CRUD_SanPham
+
+title Sequence Diagram - CRUD Sản Phẩm\nCRUD Operations for SanPham Entity
+
+actor User
+participant "Controller" as C
+participant "SanPhamService" as SPS
+participant "SanPhamRepository" as SPR
+database "MySQL Database" as DB
+participant "MyGlobal" as EH
+
+== CREATE - Thêm Sản Phẩm ==
+User -> C: POST /api/sanpham\n{maSanPham, tenSanPham, donGia}
+activate C
+C -> SPS: themSanPham(sanPham)
+activate SPS
+
+SPS -> SPS: Validate dữ liệu\n- Mã SP không rỗng\n- Tên SP không rỗng\n- Đơn giá > 0
+
+SPS -> SPR: findByMaSanPham(maSanPham)
+activate SPR
+SPR -> DB: SELECT * WHERE ma_san_pham = ?
+activate DB
+DB --> SPR: Optional.empty()
+deactivate DB
+SPR --> SPS: Optional.empty()
+deactivate SPR
+
+SPS -> SPR: save(sanPham)
+activate SPR
+SPR -> DB: INSERT INTO san_pham VALUES (...)
+activate DB
+DB --> SPR: SanPham entity
+deactivate DB
+SPR --> SPS: SanPham saved
+deactivate SPR
+
+SPS --> C: SanPham created
+deactivate SPS
+C --> User: 201 Created\n{id, maSanPham, tenSanPham, donGia}
+deactivate C
+
+== READ - Lấy Danh Sách Sản Phẩm ==
+User -> C: GET /api/sanpham
+activate C
+C -> SPS: layTatCaSanPham()
+activate SPS
+SPS -> SPR: findAll()
+activate SPR
+SPR -> DB: SELECT * FROM san_pham
+activate DB
+DB --> SPR: List<SanPham>
+deactivate DB
+SPR --> SPS: List<SanPham>
+deactivate SPR
+SPS --> C: List<SanPham>
+deactivate SPS
+C --> User: 200 OK\n[{sanPham1}, {sanPham2}, ...]
+deactivate C
+
+== READ - Tìm Sản Phẩm Còn Bán ==
+User -> C: GET /api/sanpham/con-ban
+activate C
+C -> SPS: laySanPhamConBan()
+activate SPS
+SPS -> SPR: findByTrangThaiTrue()
+activate SPR
+SPR -> DB: SELECT * FROM san_pham\nWHERE trang_thai = true
+activate DB
+DB --> SPR: List<SanPham>
+deactivate DB
+SPR --> SPS: List<SanPham> còn bán
+deactivate SPR
+SPS --> C: List<SanPham> active
+deactivate SPS
+C --> User: 200 OK\n[{sanPham active}, ...]
+deactivate C
+
+== UPDATE - Cập Nhật Sản Phẩm ==
+User -> C: PUT /api/sanpham/{id}\n{tenSanPham, donGia, soLuongTonKho}
+activate C
+C -> SPS: capNhatSanPham(id, sanPhamMoi)
+activate SPS
+
+SPS -> SPS: timSanPhamTheoId(id)
+SPS -> SPR: findById(id)
+activate SPR
+SPR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> SPR: SanPham
+deactivate DB
+SPR --> SPS: SanPham
+deactivate SPR
+
+SPS -> SPS: Cập nhật thông tin\n- setTenSanPham()\n- setDonGia()\n- setSoLuongTonKho()
+
+SPS -> SPR: save(sanPham)
+activate SPR
+SPR -> DB: UPDATE san_pham SET ...
+activate DB
+DB --> SPR: SanPham updated
+deactivate DB
+SPR --> SPS: SanPham
+deactivate SPR
+
+SPS --> C: SanPham updated
+deactivate SPS
+C --> User: 200 OK\n{sanPham updated}
+deactivate C
+
+== UPDATE - Cập Nhật Tồn Kho ==
+User -> C: PATCH /api/sanpham/{id}/ton-kho\n{soLuongThayDoi: -5}
+activate C
+C -> SPS: capNhatTonKho(id, soLuongThayDoi)
+activate SPS
+
+SPS -> SPS: timSanPhamTheoId(id)
+SPS -> SPR: findById(id)
+activate SPR
+SPR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> SPR: SanPham
+deactivate DB
+SPR --> SPS: SanPham {tonKho: 10}
+deactivate SPR
+
+SPS -> SPS: Tính tồn kho mới\ntonKhoMoi = 10 + (-5) = 5
+
+alt Tồn kho hợp lệ (>= 0)
+    SPS -> SPS: setSoLuongTonKho(5)
+    SPS -> SPR: save(sanPham)
+    activate SPR
+    SPR -> DB: UPDATE san_pham\nSET so_luong_ton_kho = 5
+    activate DB
+    DB --> SPR: SanPham updated
+    deactivate DB
+    SPR --> SPS: SanPham
+    deactivate SPR
+    SPS --> C: SanPham with new stock
+    deactivate SPS
+    C --> User: 200 OK\n{tonKho: 5}
+    deactivate C
+else Tồn kho < 0
+    SPS -> EH: throw MyException("Tồn kho không thể âm")
+    activate EH
+    EH --> C: ModelAndView("error")
+    deactivate EH
+    deactivate SPS
+    C --> User: error page
+    deactivate C
+end
+
+== DELETE - Xóa Sản Phẩm (Soft Delete) ==
+User -> C: DELETE /api/sanpham/{id}
+activate C
+C -> SPS: xoaSanPham(id)
+activate SPS
+
+SPS -> SPS: timSanPhamTheoId(id)
+SPS -> SPR: findById(id)
+activate SPR
+SPR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> SPR: SanPham
+deactivate DB
+SPR --> SPS: SanPham
+deactivate SPR
+
+note right of SPS
+  Soft delete: không xóa hẳn
+  mà set trangThai = false
+end note
+
+SPS -> SPS: setTrangThai(false)
+
+SPS -> SPR: save(sanPham)
+activate SPR
+SPR -> DB: UPDATE san_pham\nSET trang_thai = false
+activate DB
+DB --> SPR: SanPham updated
+deactivate DB
+SPR --> SPS: SanPham inactive
+deactivate SPR
+
+SPS --> C: success
+deactivate SPS
+C --> User: 204 No Content
+deactivate C
+
+@enduml

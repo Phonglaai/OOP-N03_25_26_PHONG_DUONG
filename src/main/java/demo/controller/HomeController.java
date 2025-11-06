@@ -24,4 +24,10 @@ public class HomeController {
         model.addAttribute("title", "Quan ly San Pham");
         return "sanpham";
     }
+
+    @GetMapping("/doanhthu")
+    public String doanhThu(Model model) {
+        model.addAttribute("title", "Quan ly Doanh Thu");
+        return "doanhthu";
+    }
 }

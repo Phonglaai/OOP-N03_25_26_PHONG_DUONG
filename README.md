@@ -123,10 +123,23 @@ src/main/java/demo/
 - `capnhatdoanhthu()`: Cập nhật doanh thu
 - `xoadoanhthu()`: Loại bỏ báo cáo theo thời gian doanh thu
 
-## 📈 Diagrams
+## � UML Diagrams
 
-![Sơ đồ chức năng](Sodochucnang.png)
-![Sơ đồ thuật toán](Sodothuattoan.png)
+### Structural Diagram (Class Diagram)
+- [Class Diagram](diagrams/class-diagram.puml) - Sơ đồ cấu trúc 4 đối tượng chính và mối quan hệ
+
+### Sequence Diagrams (CRUD Operations)
+- [CRUD Khách Hàng](diagrams/sequence-crud-khachhang.puml) - Thao tác CRUD cho Khách Hàng
+- [CRUD Sản Phẩm](diagrams/sequence-crud-sanpham.puml) - Thao tác CRUD cho Sản Phẩm  
+- [CRUD Đơn Hàng](diagrams/sequence-crud-donhang.puml) - Thao tác CRUD cho Đơn Hàng
+- [CRUD Doanh Thu](diagrams/sequence-crud-doanhthu.puml) - Thao tác CRUD cho Doanh Thu
+
+### Main Function (Core Business Logic)
+- [Core Function Diagram](diagrams/sequence-main-function.puml) - **Sơ đồ thuật toán chức năng chính (lõi)** - Liên kết 4 đối tượng: KhachHang → DonHang → SanPham → DoanhThu
+
+📝 **Xem hướng dẫn generate PNG:** [diagrams/README.md](diagrams/README.md)
+
+**Tổng cộng:** 1 Structural + 5 Sequence diagrams ✅
 
 ## 🚀 Deploy lên Cloud
 
@@ -138,7 +151,25 @@ Xem hướng dẫn chi tiết trong [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md)
 - Heroku: Classic PaaS platform
 - Docker: Flexible deployment
 
-## 🔒 Bảo mật
+## � Links
+
+- **GitHub Repository:** [https://github.com/Phonglaai/OOP-N03_25_26_PHONG_DUONG](https://github.com/Phonglaai/OOP-N03_25_26_PHONG_DUONG)
+- **Video Demo:** _(Chưa có - Thêm link YouTube sau khi quay video)_
+- **Deployed URL:** _(Chưa có - Thêm link sau khi deploy)_
+
+## ✅ Midterm Requirements Checklist
+
+- [x] **Yêu cầu 1:** Sử dụng MVC framework (Spring Boot) ✓
+- [x] **Yêu cầu 2:** UML Diagrams (1 Structural + 5 Sequences) ✓
+- [x] **Yêu cầu 3:** Ít nhất 4 đối tượng (KhachHang, SanPham, DonHang, DoanhThu) ✓
+- [x] **Yêu cầu 4:** CRUD cho 3 đối tượng (4/4 đối tượng có CRUD) ✓
+- [x] **Yêu cầu 5:** Phương thức hoạt động chính (Core function: `capNhatDoanhThuTuDonHang`) ✓
+- [x] **Yêu cầu 6:** Exception handling (MyException + MyGlobal) ✓
+- [x] **Yêu cầu 7:** Database interaction (JPA + MySQL) ✓
+- [x] **Yêu cầu 8:** GUI với Spring Boot (Thymeleaf templates) ✓
+- [x] **Yêu cầu 9:** README file ✓
+
+## �🔒 Bảo mật
 
 ⚠️ **Quan trọng:** Không commit database credentials vào Git!
 
@@ -152,8 +183,11 @@ MIT License
 
 ## 👥 Contributors
 
-- Nhóm N03 - Phòng Dương
-- Học kỳ 25-26
+- **Nhóm N03 - Phòng Dương**
+- **Học kỳ:** 2025-2026
+- **Môn:** Lập trình hướng đối tượng (OOP)
+- **Members:**
+  - _Thêm tên thành viên và vai trò tại đây_
 
 ---
 

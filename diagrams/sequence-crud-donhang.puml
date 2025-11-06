@@ -1,0 +1,202 @@
+@startuml Sequence_CRUD_DonHang
+
+title Sequence Diagram - CRUD Đơn Hàng\nCRUD Operations for DonHang Entity
+
+actor User
+participant "Controller" as C
+participant "DonHangService" as DHS
+participant "KhachHangService" as KHS
+participant "SanPhamService" as SPS
+participant "DonHangRepository" as DHR
+database "MySQL Database" as DB
+participant "MyGlobal" as EH
+
+== CREATE - Tạo Đơn Hàng ==
+User -> C: POST /api/donhang\n{khachHangId, sanPhamId, soLuong}
+activate C
+C -> DHS: taoDonHang(khachHangId, sanPhamId, soLuong)
+activate DHS
+
+DHS -> DHS: Validate số lượng > 0
+
+DHS -> KHS: timKhachHangTheoId(khachHangId)
+activate KHS
+KHS --> DHS: KhachHang
+deactivate KHS
+
+DHS -> SPS: timSanPhamTheoId(sanPhamId)
+activate SPS
+SPS --> DHS: SanPham
+deactivate SPS
+
+DHS -> DHS: Kiểm tra sản phẩm\n- conHang() ?\n- duSoLuong(soLuong) ?
+
+alt Sản phẩm đủ hàng
+    DHS -> DHS: Tạo DonHang mới\n- tinhTongTien()\n- generateMaDonHang()
+    
+    DHS -> DHR: save(donHang)
+    activate DHR
+    DHR -> DB: INSERT INTO don_hang VALUES (...)
+    activate DB
+    DB --> DHR: DonHang saved
+    deactivate DB
+    DHR --> DHS: DonHang
+    deactivate DHR
+    
+    DHS -> SPS: capNhatTonKho(sanPhamId, -soLuong)
+    activate SPS
+    note right of SPS: Giảm tồn kho
+    SPS --> DHS: SanPham updated
+    deactivate SPS
+    
+    DHS --> C: DonHang created
+    deactivate DHS
+    C --> User: 201 Created\n{donHang}
+    deactivate C
+else Không đủ hàng
+    DHS -> EH: throw MyException("Không đủ số lượng")
+    activate EH
+    EH --> C: ModelAndView("error")
+    deactivate EH
+    deactivate DHS
+    C --> User: error page
+    deactivate C
+end
+
+== READ - Lấy Tất Cả Đơn Hàng ==
+User -> C: GET /api/donhang
+activate C
+C -> DHS: layTatCaDonHang()
+activate DHS
+DHS -> DHR: findAll()
+activate DHR
+DHR -> DB: SELECT * FROM don_hang
+activate DB
+DB --> DHR: List<DonHang>
+deactivate DB
+DHR --> DHS: List<DonHang>
+deactivate DHR
+DHS --> C: List<DonHang>
+deactivate DHS
+C --> User: 200 OK\n[{donHang1}, {donHang2}, ...]
+deactivate C
+
+== READ - Lấy Đơn Hàng Của Khách Hàng ==
+User -> C: GET /api/donhang/khachhang/{khachHangId}
+activate C
+C -> DHS: layDonHangCuaKhachHang(khachHangId)
+activate DHS
+
+DHS -> KHS: timKhachHangTheoId(khachHangId)
+activate KHS
+KHS --> DHS: KhachHang
+deactivate KHS
+
+DHS -> DHR: findByKhachHang(khachHang)
+activate DHR
+DHR -> DB: SELECT * FROM don_hang\nWHERE khach_hang_id = ?
+activate DB
+DB --> DHR: List<DonHang>
+deactivate DB
+DHR --> DHS: List<DonHang>
+deactivate DHR
+
+DHS --> C: List<DonHang> của khách
+deactivate DHS
+C --> User: 200 OK\n[{donHang của khách}, ...]
+deactivate C
+
+== READ - Lấy Đơn Hàng Theo Trạng Thái ==
+User -> C: GET /api/donhang/trang-thai/{trangThai}
+activate C
+C -> DHS: layDonHangTheoTrangThai(trangThai)
+activate DHS
+DHS -> DHR: findByTrangThai(trangThai)
+activate DHR
+DHR -> DB: SELECT * FROM don_hang\nWHERE trang_thai = ?
+activate DB
+DB --> DHR: List<DonHang>
+deactivate DB
+DHR --> DHS: List<DonHang>
+deactivate DHR
+DHS --> C: List<DonHang>
+deactivate DHS
+C --> User: 200 OK\n[{donHang}, ...]
+deactivate C
+
+== UPDATE - Hoàn Thành Đơn Hàng ==
+User -> C: PATCH /api/donhang/{id}/hoan-thanh
+activate C
+C -> DHS: hoanThanhDonHang(id)
+activate DHS
+
+DHS -> DHS: capNhatTrangThai(id, "Đã hoàn thành")
+
+DHS -> DHR: findById(id)
+activate DHR
+DHR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> DHR: DonHang
+deactivate DB
+DHR --> DHS: DonHang {trangThai: "Đang xử lý"}
+deactivate DHR
+
+DHS -> DHS: setTrangThai("Đã hoàn thành")
+
+DHS -> DHR: save(donHang)
+activate DHR
+DHR -> DB: UPDATE don_hang\nSET trang_thai = 'Đã hoàn thành'
+activate DB
+DB --> DHR: DonHang updated
+deactivate DB
+DHR --> DHS: DonHang
+deactivate DHR
+
+DHS --> C: DonHang completed
+deactivate DHS
+C --> User: 200 OK\n{donHang: "Đã hoàn thành"}
+deactivate C
+
+== DELETE - Hủy Đơn Hàng ==
+User -> C: PATCH /api/donhang/{id}/huy
+activate C
+C -> DHS: huyDonHang(id)
+activate DHS
+
+DHS -> DHS: capNhatTrangThai(id, "Đã hủy")
+
+DHS -> DHR: findById(id)
+activate DHR
+DHR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> DHR: DonHang
+deactivate DB
+DHR --> DHS: DonHang {soLuong: 5}
+deactivate DHR
+
+DHS -> DHS: setTrangThai("Đã hủy")
+
+note right of DHS
+  Nếu hủy đơn, hoàn lại tồn kho
+end note
+
+DHS -> SPS: capNhatTonKho(sanPhamId, +5)
+activate SPS
+SPS --> DHS: SanPham updated
+deactivate SPS
+
+DHS -> DHR: save(donHang)
+activate DHR
+DHR -> DB: UPDATE don_hang\nSET trang_thai = 'Đã hủy'
+activate DB
+DB --> DHR: DonHang updated
+deactivate DB
+DHR --> DHS: DonHang
+deactivate DHR
+
+DHS --> C: DonHang cancelled
+deactivate DHS
+C --> User: 200 OK\n{donHang: "Đã hủy"}
+deactivate C
+
+@enduml

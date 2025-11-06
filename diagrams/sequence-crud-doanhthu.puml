@@ -1,0 +1,227 @@
+@startuml Sequence_CRUD_DoanhThu
+
+title Sequence Diagram - CRUD Doanh Thu\nCRUD Operations for DoanhThu Entity
+
+actor User
+participant "Controller" as C
+participant "DoanhThuService" as DTS
+participant "DonHangService" as DHS
+participant "DoanhThuRepository" as DTR
+database "MySQL Database" as DB
+participant "MyGlobal" as EH
+
+== CREATE - Tạo Báo Cáo Doanh Thu ==
+User -> C: POST /api/doanhthu\n{ngayGhiNhan}
+activate C
+C -> DTS: taoDoanhThu(ngayGhiNhan)
+activate DTS
+
+DTS -> DTR: existsByNgayGhiNhan(ngayGhiNhan)
+activate DTR
+DTR -> DB: SELECT COUNT(*)\nWHERE ngay_ghi_nhan = ?
+activate DB
+DB --> DTR: false
+deactivate DB
+DTR --> DTS: false (chưa tồn tại)
+deactivate DTR
+
+DTS -> DTS: Tạo DoanhThu mới\n- tongTien = 0\n- soDonHang = 0\n- soKhachHang = 0
+
+DTS -> DTR: save(doanhThu)
+activate DTR
+DTR -> DB: INSERT INTO doanh_thu VALUES (...)
+activate DB
+DB --> DTR: DoanhThu saved
+deactivate DB
+DTR --> DTS: DoanhThu
+deactivate DTR
+
+DTS --> C: DoanhThu created
+deactivate DTS
+C --> User: 201 Created\n{doanhThu}
+deactivate C
+
+== READ - Lấy Doanh Thu Hôm Nay ==
+User -> C: GET /api/doanhthu/hom-nay
+activate C
+C -> DTS: layDoanhThuHomNay()
+activate DTS
+
+DTS -> DTR: layDoanhThuHomNay()
+activate DTR
+DTR -> DB: SELECT * FROM doanh_thu\nWHERE ngay_ghi_nhan = CURRENT_DATE
+activate DB
+
+alt Đã có doanh thu hôm nay
+    DB --> DTR: DoanhThu
+    deactivate DB
+    DTR --> DTS: Optional<DoanhThu>
+    deactivate DTR
+    DTS --> C: DoanhThu
+    deactivate DTS
+    C --> User: 200 OK\n{doanhThu hôm nay}
+    deactivate C
+else Chưa có doanh thu
+    DB --> DTR: null
+    deactivate DB
+    DTR --> DTS: Optional.empty()
+    deactivate DTR
+    
+    DTS -> DTS: taoDoanhThu(LocalDate.now())
+    note right of DTS: Tự động tạo mới
+    
+    DTS --> C: DoanhThu mới
+    deactivate DTS
+    C --> User: 200 OK\n{doanhThu mới}
+    deactivate C
+end
+
+== READ - Lấy Doanh Thu Theo Khoảng Thời Gian ==
+User -> C: GET /api/doanhthu\n?tuNgay=2025-11-01&denNgay=2025-11-30
+activate C
+C -> DTS: layDoanhThuTheoKhoangThoiGian(tuNgay, denNgay)
+activate DTS
+
+DTS -> DTR: findByNgayGhiNhanBetweenOrderByNgayGhiNhanDesc(tuNgay, denNgay)
+activate DTR
+DTR -> DB: SELECT * FROM doanh_thu\nWHERE ngay_ghi_nhan BETWEEN ? AND ?\nORDER BY ngay_ghi_nhan DESC
+activate DB
+DB --> DTR: List<DoanhThu>
+deactivate DB
+DTR --> DTS: List<DoanhThu>
+deactivate DTR
+
+DTS --> C: List<DoanhThu> tháng 11
+deactivate DTS
+C --> User: 200 OK\n[{doanhThu ngày 1}, {ngày 2}, ...]
+deactivate C
+
+== READ - Lấy Top Doanh Thu Cao Nhất ==
+User -> C: GET /api/doanhthu/top
+activate C
+C -> DTS: layTopDoanhThuCaoNhat()
+activate DTS
+
+DTS -> DTR: findTop10ByOrderByTongTienDesc()
+activate DTR
+DTR -> DB: SELECT * FROM doanh_thu\nORDER BY tong_tien DESC\nLIMIT 10
+activate DB
+DB --> DTR: List<DoanhThu> top 10
+deactivate DB
+DTR --> DTS: List<DoanhThu>
+deactivate DTR
+
+DTS --> C: Top 10 ngày có doanh thu cao
+deactivate DTS
+C --> User: 200 OK\n[{doanhThu1}, {doanhThu2}, ...]
+deactivate C
+
+== UPDATE - Cập Nhật Doanh Thu ==
+User -> C: PUT /api/doanhthu/{id}\n{tongTien, soDonHang, soKhachHang}
+activate C
+C -> DTS: capNhatDoanhThu(id, tongTien, soDonHang, soKhachHang)
+activate DTS
+
+DTS -> DTS: timDoanhThuTheoId(id)
+DTS -> DTR: findById(id)
+activate DTR
+DTR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> DTR: DoanhThu
+deactivate DB
+DTR --> DTS: DoanhThu
+deactivate DTR
+
+DTS -> DTS: Cập nhật thông tin\n- setTongTien()\n- setSoDonHang()\n- setSoKhachHang()\n- setThoiGianCapNhat()
+
+DTS -> DTR: save(doanhThu)
+activate DTR
+DTR -> DB: UPDATE doanh_thu SET ...
+activate DB
+DB --> DTR: DoanhThu updated
+deactivate DB
+DTR --> DTS: DoanhThu
+deactivate DTR
+
+DTS --> C: DoanhThu updated
+deactivate DTS
+C --> User: 200 OK\n{doanhThu updated}
+deactivate C
+
+== UPDATE - Đồng Bộ Doanh Thu Hôm Nay ==
+User -> C: POST /api/doanhthu/dong-bo-hom-nay
+activate C
+C -> DTS: dongBoDoanhThuHomNay()
+activate DTS
+
+DTS -> DTR: existsByNgayGhiNhan(today)
+activate DTR
+DTR -> DB: SELECT COUNT(*) WHERE ngay_ghi_nhan = CURRENT_DATE
+activate DB
+DB --> DTR: true
+deactivate DB
+DTR --> DTS: true
+deactivate DTR
+
+DTS -> DTS: layDoanhThuTheoNgay(today)
+note right of DTS: Lấy báo cáo hiện tại
+
+DTS -> DTS: resetDoanhThu()\n- tongTien = 0\n- soDonHang = 0
+
+DTS -> DHS: tinhDoanhThuHomNay()
+activate DHS
+DHS --> DTS: tongTien = 5,000,000
+deactivate DHS
+
+DTS -> DHS: demDonHangHomNay()
+activate DHS
+DHS --> DTS: soDonHang = 25
+deactivate DHS
+
+DTS -> DTS: Cập nhật doanh thu\n- setTongTien(5,000,000)\n- setSoDonHang(25)\n- setThoiGianCapNhat(now)
+
+DTS -> DTR: save(doanhThu)
+activate DTR
+DTR -> DB: UPDATE doanh_thu SET ...
+activate DB
+DB --> DTR: DoanhThu synchronized
+deactivate DB
+DTR --> DTS: DoanhThu
+deactivate DTR
+
+DTS --> C: DoanhThu synchronized
+deactivate DTS
+C --> User: 200 OK\n{doanhThu đã đồng bộ}
+deactivate C
+
+== DELETE - Xóa Báo Cáo Doanh Thu ==
+User -> C: DELETE /api/doanhthu/{id}
+activate C
+C -> DTS: xoaDoanhThu(id)
+activate DTS
+
+DTS -> DTS: timDoanhThuTheoId(id)
+DTS -> DTR: findById(id)
+activate DTR
+DTR -> DB: SELECT * WHERE id = ?
+activate DB
+DB --> DTR: DoanhThu
+deactivate DB
+DTR --> DTS: DoanhThu
+deactivate DTR
+
+DTS -> DTR: deleteById(id)
+activate DTR
+DTR -> DB: DELETE FROM doanh_thu WHERE id = ?
+activate DB
+DB --> DTR: deleted
+deactivate DB
+DTR --> DTS: success
+deactivate DTR
+
+DTS --> C: success
+deactivate DTS
+C --> User: 204 No Content
+deactivate C
+
+@enduml
