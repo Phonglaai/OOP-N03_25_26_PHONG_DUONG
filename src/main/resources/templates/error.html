@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lỗi - Ứng dụng</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#333; }
+        .card { max-width:860px; margin:40px auto; background:white; padding:24px; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.05); }
+        h1 { color:#c0392b; margin-bottom:8px }
+        .meta { color:#666; margin-bottom:16px }
+        pre { background:#111; color:#fff; padding:12px; border-radius:6px; overflow:auto; max-height:260px }
+        .suggest { background:#e8f6f3; padding:12px; border-left:4px solid #1abc9c; border-radius:6px; margin-top:12px }
+        a.button { display:inline-block; margin-top:16px; padding:10px 16px; background:#2d6cdf; color:#fff; border-radius:6px; text-decoration:none }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Đã xảy ra lỗi</h1>
+    <div class="meta">
+        <strong>Loại lỗi:</strong> <span th:text="${errorType}">Exception</span>
+        &nbsp;&middot;&nbsp;
+        <strong>Thời gian:</strong> <span th:text="${timestamp}">--</span>
+    </div>
+
+    <div>
+        <strong>Thông báo:</strong>
+        <p th:text="${errorMessage} ?: 'Đã xảy ra lỗi không xác định'">Đã xảy ra lỗi</p>
+    </div>
+
+    <div class="suggest" th:if="${suggestion}">
+        <strong>Gợi ý:</strong>
+        <p th:text="${suggestion}">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</p>
+    </div>
+
+    <div th:if="${technicalDetail}">
+        <strong>Chi tiết kỹ thuật:</strong>
+        <div class="meta" th:text="${technicalDetail}">-</div>
+    </div>
+
+    <div th:if="${stackTrace}">
+        <strong>Stack trace:</strong>
+        <pre th:text="${stackTrace}"></pre>
+    </div>
+
+    <a class="button" href="/">Về trang chủ</a>
+</div>
+</body>
+</html>
